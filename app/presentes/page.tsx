@@ -7,7 +7,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, ShoppingCart, Palette, Coffee, Key, Magnet, Download,
   CheckCircle2, X, Loader2, QrCode, Truck, Zap, Headphones,
-  Plus, Minus, Trash2, ChevronRight, Package, MapPin, Mail, User, FileText,
+  Plus, Minus, Trash2, ChevronRight, Package, MapPin, Mail, User, FileText, Phone,
 } from 'lucide-react';
 
 /* ─── Tipos base ─── */
@@ -47,6 +47,18 @@ const corClasses: Record<string, { text: string }> = {
   green:  { text: 'text-green-600' },
 };
 
+const inferCategory = (product: DbProduct) => {
+  const raw = (product.category || '').trim().toLowerCase();
+  if (raw in CATEGORY_CONFIG) return raw;
+
+  const normalized = product.name.toLowerCase();
+  if (/caneca/.test(normalized)) return 'canecas';
+  if (/chaveiro|porta[- ]?chaves?/.test(normalized)) return 'porta-chaves';
+  if (/autocolante|iman|íman|sticker/.test(normalized)) return 'iman-autocolante';
+  if (/digital|download|png/.test(normalized)) return 'digital';
+  return 'decoracao';
+};
+
 function PresentesPageContent() {
   const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
@@ -59,7 +71,7 @@ function PresentesPageContent() {
   const [submittedOrders, setSubmittedOrders] = useState<any[]>([]);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', email: '', address: '', notes: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', notes: '' });
 
   const searchParams = useSearchParams();
   const linkedQR = searchParams.get('qr');
@@ -70,11 +82,44 @@ function PresentesPageContent() {
   };
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    const bootstrap = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-      if (user?.email) setForm(f => ({ ...f, email: user.email! }));
-    });
-    fetchProducts();
+
+      const metadata = (user?.user_metadata || {}) as Record<string, string | undefined>;
+      const fullName = metadata.full_name || metadata.name || [metadata.first_name, metadata.last_name].filter(Boolean).join(' ').trim();
+      const phone = metadata.phone || user?.phone || '';
+
+      setForm(f => ({
+        ...f,
+        email: user?.email || f.email,
+        name: fullName || f.name,
+        phone: phone || f.phone,
+      }));
+
+      if (user?.id) {
+        const { data: lastOrder } = await supabase
+          .from('orders')
+          .select('customer_name, customer_email, shipping_address')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (lastOrder) {
+          setForm(f => ({
+            ...f,
+            name: f.name || lastOrder.customer_name || '',
+            email: f.email || lastOrder.customer_email || '',
+            address: f.address || lastOrder.shipping_address || '',
+          }));
+        }
+      }
+
+      await fetchProducts();
+    };
+
+    bootstrap();
   }, []);
 
   const fetchProducts = async () => {
@@ -83,7 +128,16 @@ function PresentesPageContent() {
       .select('*')
       .eq('is_active', true)
       .order('display_order', { ascending: true });
-    if (data) setDbProducts(data);
+
+    if (data) {
+      const unique = new Map<string, DbProduct>();
+      data.forEach((product: DbProduct) => {
+        const key = `${product.name.trim().toLowerCase()}::${Number(product.price).toFixed(2)}::${product.image_url || ''}`;
+        if (!unique.has(key)) unique.set(key, product);
+      });
+      setDbProducts(Array.from(unique.values()));
+    }
+
     setLoadingProducts(false);
   };
 
@@ -96,7 +150,7 @@ function PresentesPageContent() {
     }>();
 
     dbProducts.forEach(prod => {
-      const slug = prod.category || 'outros';
+      const slug = inferCategory(prod);
       const cfg = CATEGORY_CONFIG[slug] ?? { nome: slug, icone: Package, cor: 'red', order: 99 };
       if (!catMap.has(slug)) {
         catMap.set(slug, { id: slug, ...cfg, precoMin: prod.price, produtos: [] });
@@ -138,25 +192,47 @@ function PresentesPageContent() {
   };
 
   const handleSubmit = async () => {
-    if (!form.email || !form.name) {
-      showToast('Preenche o nome e o email para continuar.');
+    if (!form.email || !form.name || !form.address || !form.phone) {
+      showToast('Preenche nome, email, contacto e morada para continuar.');
       return;
     }
     setSubmitting(true);
     try {
-      const inserts = cartItems.map(item => ({
-        user_id: user?.id || null,
-        product_name: item.produto.nome,
-        price: item.price,
-        customer_email: form.email,
-        customer_name: form.name,
-        shipping_address: form.address || null,
-        notes: form.notes || null,
-        status: 'pending',
-        short_code: linkedQR || null,
-      }));
+      const optionalColumns = new Set(['notes', 'customer_phone']);
+      let data: any[] | null = null;
+      let error: any = null;
 
-      const { data, error } = await supabase.from('orders').insert(inserts).select();
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const inserts = cartItems.map(item => {
+          const row: Record<string, any> = {
+            user_id: user?.id || null,
+            product_name: item.produto.nome,
+            price: item.price,
+            customer_email: form.email,
+            customer_name: form.name,
+            shipping_address: form.address || null,
+            status: 'pending',
+            short_code: linkedQR || null,
+          };
+
+          if (optionalColumns.has('customer_phone')) row.customer_phone = form.phone || null;
+          if (optionalColumns.has('notes')) row.notes = form.notes || null;
+          return row;
+        });
+
+        const result = await supabase.from('orders').insert(inserts).select();
+        data = result.data;
+        error = result.error;
+
+        if (!error) break;
+
+        const match = error.message?.match(/Could not find the '([^']+)' column/);
+        if (!match) break;
+        const missingColumn = match[1];
+        if (!optionalColumns.has(missingColumn)) break;
+        optionalColumns.delete(missingColumn);
+      }
+
       if (error) throw error;
 
       setSubmittedOrders(data || []);
@@ -263,12 +339,12 @@ function PresentesPageContent() {
                     <div className="flex-1 h-px bg-gray-100 ml-2" />
                   </div>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                    {categoria.produtos.map((produto, idx) => {
+                    {categoria.produtos.map((produto) => {
                       const key = `${produto.id}-${categoria.id}`;
                       const isAdded = addedId === key;
                       const inCart = cartItems.find(i => i.produto.id === produto.id);
                       return (
-                        <div key={idx} className="group border border-gray-100 rounded-2xl overflow-hidden hover:border-gray-200 hover:shadow-md transition-all duration-200 bg-white">
+                        <div key={produto.id} className="group border border-gray-100 rounded-2xl overflow-hidden hover:border-gray-200 hover:shadow-md transition-all duration-200 bg-white">
                           <div className="aspect-square bg-gray-50 overflow-hidden relative">
                             {produto.imagem ? (
                               <img src={produto.imagem} alt={produto.nome} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -469,7 +545,12 @@ function PresentesPageContent() {
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all" />
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 mb-1.5"><MapPin size={12} />Morada de entrega</label>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 mb-1.5"><Phone size={12} />Contacto *</label>
+                      <input type="tel" placeholder="+351 9xx xxx xxx" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 mb-1.5"><MapPin size={12} />Morada de entrega *</label>
                       <textarea placeholder="Rua, numero, codigo postal, cidade" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} rows={3}
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all resize-none" />
                     </div>
@@ -488,7 +569,7 @@ function PresentesPageContent() {
                 <div className="px-6 py-5 border-t border-gray-100">
                   <button
                     onClick={handleSubmit}
-                    disabled={submitting || !form.name || !form.email}
+                    disabled={submitting || !form.name || !form.email || !form.phone || !form.address}
                     className="w-full py-3.5 bg-gray-900 hover:bg-black text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-40"
                   >
                     {submitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
@@ -533,7 +614,7 @@ function PresentesPageContent() {
 
                 <div className="w-full space-y-2 mt-2">
                   <button
-                    onClick={() => { closeCart(); setForm(f => ({ ...f, name: '', address: '', notes: '' })); }}
+                    onClick={() => { closeCart(); setForm(f => ({ ...f, name: '', phone: '', address: '', notes: '' })); }}
                     className="w-full py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-black transition-colors"
                   >Continuar a explorar</button>
                   <Link href="/dashboard" className="w-full py-3 border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-50 transition-colors text-sm flex items-center justify-center gap-2">
