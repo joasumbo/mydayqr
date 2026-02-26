@@ -215,7 +215,14 @@ export default function DashboardPage() {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ id, phrase: editPhrase.trim() }),
     });
-    if (res.ok) { setEditingId(null); fetchQRCodes(); showToast('success', 'Atualizado!'); }
+    if (res.ok) {
+      setEditingId(null);
+      fetchQRCodes();
+      showToast('success', 'Atualizado!');
+      return;
+    }
+    const json = await res.json().catch(() => null);
+    showToast('error', json?.error || 'Não foi possível atualizar este QR');
   };
 
   /* ── DELETE ── */
@@ -224,7 +231,13 @@ export default function DashboardPage() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
     const res = await fetch(`/api/qrcodes?id=${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${session.access_token}` } });
-    if (res.ok) { fetchQRCodes(); showToast('success', 'Excluído!'); }
+    if (res.ok) {
+      fetchQRCodes();
+      showToast('success', 'Excluído!');
+      return;
+    }
+    const json = await res.json().catch(() => null);
+    showToast('error', json?.error || 'Não foi possível excluir este QR');
   };
 
   const handleDownload = (shortCode: string, imgUrl?: string) => {

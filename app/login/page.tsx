@@ -45,7 +45,7 @@ function LoginPageContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-500 via-red-600 to-rose-700 dark:from-gray-900 dark:via-red-900 dark:to-gray-900 px-4 transition-colors">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-600 via-red-700 to-rose-800 px-4 transition-colors">
       {/* Toggle Dark Mode */}
       <button
         onClick={toggleTheme}
