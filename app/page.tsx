@@ -7,8 +7,10 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-red-500 via-red-600 to-rose-700 text-white">
-        <div className="container mx-auto px-4 py-20">
+      <div className="relative overflow-hidden text-white" style={{ background: 'radial-gradient(ellipse at center, #dc2626 0%, #991b1b 40%, #450a0a 80%, #1c0505 100%)' }}>
+        {/* Vignette overlay for extra depth at edges */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.4) 100%)' }} />
+        <div className="relative container mx-auto px-4 py-20">
           <div className="max-w-4xl mx-auto text-center">
             {/* Logo/Brand */}
             <div className="inline-block bg-white px-8 py-4 rounded-2xl shadow-2xl mb-8">
