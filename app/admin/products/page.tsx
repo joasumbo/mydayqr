@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Plus, Search, Pencil, Trash2, X, Check, Image as ImageIcon, GripVertical } from 'lucide-react';
+import { adminFetch, adminSave, adminDelete } from '@/lib/admin-data';
+import ImageUpload from '@/components/ImageUpload';
 
 interface Product {
   id: string;
@@ -37,11 +39,7 @@ export default function ProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const { data } = await supabase
-        .from('products')
-        .select('*')
-        .order('display_order', { ascending: true });
-
+      const data = await adminFetch('products', { order: { column: 'display_order', ascending: true } });
       if (data) setProducts(data);
     } catch (error) {
       console.error('Erro ao buscar produtos:', error);
@@ -91,14 +89,9 @@ export default function ProductsPage() {
       };
 
       if (editingProduct) {
-        await supabase
-          .from('products')
-          .update(productData)
-          .eq('id', editingProduct.id);
+        await adminSave('products', productData, editingProduct.id);
       } else {
-        await supabase
-          .from('products')
-          .insert(productData);
+        await adminSave('products', productData);
       }
 
       fetchProducts();
@@ -111,30 +104,17 @@ export default function ProductsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tens a certeza que queres excluir este produto?')) return;
-
     try {
-      await supabase
-        .from('products')
-        .delete()
-        .eq('id', id);
-
+      await adminDelete('products', id);
       fetchProducts();
-    } catch (error) {
-      console.error('Erro ao excluir:', error);
-    }
+    } catch (error) { console.error('Erro ao excluir:', error); }
   };
 
   const handleToggleActive = async (product: Product) => {
     try {
-      await supabase
-        .from('products')
-        .update({ is_active: !product.is_active })
-        .eq('id', product.id);
-
+      await adminSave('products', { is_active: !product.is_active }, product.id);
       fetchProducts();
-    } catch (error) {
-      console.error('Erro ao atualizar:', error);
-    }
+    } catch (error) { console.error('Erro ao atualizar:', error); }
   };
 
   const filteredProducts = products.filter(p =>
@@ -302,13 +282,11 @@ export default function ProductsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">URL da Imagem</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-gray-300 mb-2">Imagem</label>
+                <ImageUpload
                   value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  placeholder="/imagens/produto.jpeg"
+                  onChange={(url) => setFormData({ ...formData, image_url: url })}
+                  folder="products"
                 />
               </div>
               <div className="flex items-center gap-3">

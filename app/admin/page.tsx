@@ -2,8 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Users, Package, QrCode, TrendingUp, ArrowUpRight, ArrowDownRight, ShoppingCart, Clock } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { Users, Package, QrCode, TrendingUp, ArrowUpRight, ShoppingCart, Clock, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
+import { adminFetch } from '@/lib/admin-data';
+import {
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
+} from 'recharts';
 
 interface Stats {
   totalUsers: number;
@@ -12,6 +25,16 @@ interface Stats {
   totalOrders: number;
   recentOrders: any[];
   recentQrCodes: any[];
+  orderData: any[];
+  productData: any[];
+  deltaUsers: string;
+  deltaQr: string;
+  deltaOrders: string;
+  deltaConversion: string;
+  deltaUsersPositive: boolean;
+  deltaQrPositive: boolean;
+  deltaOrdersPositive: boolean;
+  deltaConversionPositive: boolean;
 }
 
 export default function AdminDashboard() {
@@ -21,7 +44,17 @@ export default function AdminDashboard() {
     totalProducts: 0,
     totalOrders: 0,
     recentOrders: [],
-    recentQrCodes: []
+    recentQrCodes: [],
+    orderData: [],
+    productData: [],
+    deltaUsers: '—',
+    deltaQr: '—',
+    deltaOrders: '—',
+    deltaConversion: '—',
+    deltaUsersPositive: true,
+    deltaQrPositive: true,
+    deltaOrdersPositive: true,
+    deltaConversionPositive: true,
   });
   const [loading, setLoading] = useState(true);
 
@@ -31,49 +64,80 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      // Buscar total de QR codes
-      const { count: qrCount } = await supabase
-        .from('qrcodes')
-        .select('*', { count: 'exact', head: true });
+      const [qrData, productData, orderData] = await Promise.all([
+        adminFetch('qrcodes', { select: '*', order: { column: 'created_at', ascending: false } }),
+        adminFetch('products', { select: '*' }),
+        adminFetch('orders', { select: '*', order: { column: 'created_at', ascending: false } }),
+      ]);
 
-      // Buscar total de produtos
-      const { count: productCount } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true });
+      const allQrCodes: any[] = qrData || [];
+      const allOrders: any[] = orderData || [];
+      const uniqueUserIds = new Set(allQrCodes.map((u: any) => u.user_id));
 
-      // Buscar QR codes recentes
-      const { data: recentQrs } = await supabase
-        .from('qrcodes')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(5);
+      // Deltas semana a semana
+      const now = Date.now();
+      const day = 86400000;
+      const inRange = (iso: string, msAgo: number, msAgoEnd: number) => {
+        const t = new Date(iso).getTime();
+        return t >= now - msAgo && t < now - msAgoEnd;
+      };
 
-      // Contar usuários únicos
-      const { data: uniqueUsers } = await supabase
-        .from('qrcodes')
-        .select('user_id');
+      const qrThisWeek  = allQrCodes.filter(q => inRange(q.created_at, 7*day, 0)).length;
+      const qrLastWeek  = allQrCodes.filter(q => inRange(q.created_at, 14*day, 7*day)).length;
+      const ordThisWeek = allOrders.filter(o => inRange(o.created_at, 7*day, 0)).length;
+      const ordLastWeek = allOrders.filter(o => inRange(o.created_at, 14*day, 7*day)).length;
+      const usrThisWeek = new Set(allQrCodes.filter(q => inRange(q.created_at, 7*day, 0)).map(q => q.user_id)).size;
+      const usrLastWeek = new Set(allQrCodes.filter(q => inRange(q.created_at, 14*day, 7*day)).map(q => q.user_id)).size;
 
-      const uniqueUserIds = new Set(uniqueUsers?.map((u: any) => u.user_id) || []);
+      const pct = (cur: number, prev: number) => {
+        if (prev === 0) return cur > 0 ? { label: 'novo', positive: true } : { label: '—', positive: true };
+        const v = Math.round(((cur - prev) / prev) * 100);
+        return { label: (v >= 0 ? '+' : '') + v + '%', positive: v >= 0 };
+      };
 
-      // Buscar total de encomendas
-      const { count: orderCount } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true });
+      const dUsers = pct(usrThisWeek, usrLastWeek);
+      const dQr    = pct(qrThisWeek, qrLastWeek);
+      const dOrd   = pct(ordThisWeek, ordLastWeek);
+      const convNow  = usrThisWeek > 0 ? (ordThisWeek / usrThisWeek) * 100 : 0;
+      const convPrev = usrLastWeek > 0 ? (ordLastWeek / usrLastWeek) * 100 : 0;
+      const dConv = pct(Math.round(convNow), Math.round(convPrev));
 
-      // Buscar encomendas recentes
-      const { data: recentOrders } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(5);
+      const last7Days = [...Array(7)].map((_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        return d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
+      }).reverse();
+
+      const ordersByDay = last7Days.map(day => {
+        const total = allOrders.filter((o: any) =>
+          new Date(o.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' }) === day
+        ).reduce((sum: number, o: any) => sum + Number(o.price || 0), 0);
+        return { name: day, valor: total };
+      });
+
+      const productDistribution = allOrders.slice(0, 20).reduce((acc: any, order: any) => {
+        if (order.product_name) acc[order.product_name] = (acc[order.product_name] || 0) + 1;
+        return acc;
+      }, {});
+      const pieData = Object.entries(productDistribution).map(([name, value]) => ({ name, value }));
 
       setStats({
         totalUsers: uniqueUserIds.size,
-        totalQrCodes: qrCount || 0,
-        totalProducts: productCount || 0,
-        totalOrders: orderCount || 0,
-        recentOrders: recentOrders || [],
-        recentQrCodes: recentQrs || []
+        totalQrCodes: allQrCodes.length,
+        totalProducts: (productData || []).length,
+        totalOrders: allOrders.length,
+        recentOrders: allOrders.slice(0, 5),
+        recentQrCodes: allQrCodes.slice(0, 5),
+        orderData: ordersByDay,
+        productData: pieData.length > 0 ? pieData : [{ name: 'Sem dados', value: 1 }],
+        deltaUsers: dUsers.label,
+        deltaQr: dQr.label,
+        deltaOrders: dOrd.label,
+        deltaConversion: dConv.label,
+        deltaUsersPositive: dUsers.positive,
+        deltaQrPositive: dQr.positive,
+        deltaOrdersPositive: dOrd.positive,
+        deltaConversionPositive: dConv.positive,
       });
     } catch (error) {
       console.error('Erro ao buscar estatísticas:', error);
@@ -87,34 +151,40 @@ export default function AdminDashboard() {
       value: stats.totalUsers,
       icon: Users,
       color: 'bg-blue-500',
-      change: '+12%',
-      positive: true
+      change: stats.deltaUsers,
+      positive: stats.deltaUsersPositive,
+      tooltip: 'vs semana anterior'
     },
     {
       title: 'QR Codes',
       value: stats.totalQrCodes,
       icon: QrCode,
       color: 'bg-green-500',
-      change: '+23%',
-      positive: true
+      change: stats.deltaQr,
+      positive: stats.deltaQrPositive,
+      tooltip: 'vs semana anterior'
     },
     {
       title: 'Encomendas',
       value: stats.totalOrders,
       icon: ShoppingCart,
       color: 'bg-amber-500',
-      change: stats.totalOrders > 0 ? '+1' : '0',
-      positive: true
+      change: stats.deltaOrders,
+      positive: stats.deltaOrdersPositive,
+      tooltip: 'vs semana anterior'
     },
     {
-      title: 'Taxa Conversão',
+      title: 'Taxa Conversao',
       value: stats.totalUsers > 0 ? Math.round((stats.totalOrders / stats.totalUsers) * 100) + '%' : '0%',
       icon: TrendingUp,
       color: 'bg-red-500',
-      change: '+2%',
-      positive: true
+      change: stats.deltaConversion,
+      positive: stats.deltaConversionPositive,
+      tooltip: 'vs semana anterior'
     }
   ];
+
+  const COLORS = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6'];
 
   if (loading) {
     return (
@@ -128,8 +198,8 @@ export default function AdminDashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <p className="text-gray-400 mt-1">Visão geral do MyDay QR</p>
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-500 mt-1">Visão geral do MyDay QR</p>
       </div>
 
       {/* Stats Grid */}
@@ -137,33 +207,117 @@ export default function AdminDashboard() {
         {statCards.map((stat, index) => (
           <div
             key={index}
-            className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-gray-600 transition-colors"
+            className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-colors shadow-sm"
           >
             <div className="flex items-start justify-between">
               <div className={`p-3 rounded-lg ${stat.color}`}>
                 <stat.icon size={20} className="text-white" />
               </div>
-              <div className={`flex items-center gap-1 text-sm ${stat.positive ? 'text-green-400' : 'text-red-400'}`}>
-                {stat.positive ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+              <div
+                title={stat.tooltip}
+                className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${
+                  stat.positive ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                }`}
+              >
+                {stat.positive ? <ArrowUpRight size={13} /> : <ArrowUpRight size={13} className="rotate-90" />}
                 {stat.change}
               </div>
             </div>
             <div className="mt-4">
-              <h3 className="text-3xl font-bold text-white">{stat.value}</h3>
-              <p className="text-gray-400 text-sm mt-1">{stat.title}</p>
+              <h3 className="text-3xl font-bold text-gray-900">{stat.value}</h3>
+              <p className="text-gray-500 text-sm mt-1">{stat.title}</p>
             </div>
           </div>
         ))}
       </div>
 
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Sales Chart */}
+        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <BarChart3 size={20} className="text-red-600" />
+              Volume de Vendas (7 dias)
+            </h2>
+          </div>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={stats.orderData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  stroke="#9ca3af"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="#9ca3af"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `${value}€`}
+                />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                  itemStyle={{ color: '#ef4444' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="valor"
+                  stroke="#ef4444"
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#ef4444' }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Product Mix Chart */}
+        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <PieChartIcon size={20} className="text-blue-600" />
+              Mix de Produtos
+            </h2>
+          </div>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={stats.productData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {stats.productData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Orders */}
-        <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-          <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Encomendas Recentes</h2>
-            <Link href="/admin/orders" className="text-red-400 hover:text-red-300 text-sm font-medium">Ver todas</Link>
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">Encomendas Recentes</h2>
+            <Link href="/admin/orders" className="text-red-600 hover:text-red-700 text-sm font-medium">Ver todas</Link>
           </div>
-          <div className="divide-y divide-gray-700">
+          <div className="divide-y divide-gray-100">
             {stats.recentOrders.length === 0 ? (
               <div className="p-8 text-center text-gray-400">
                 <ShoppingCart size={40} className="mx-auto mb-3 opacity-20" />
@@ -171,17 +325,17 @@ export default function AdminDashboard() {
               </div>
             ) : (
               stats.recentOrders.map((order: any) => (
-                <div key={order.id} className="p-4 hover:bg-gray-700/50 transition-colors">
+                <div key={order.id} className="p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-white font-medium">{order.product_name}</p>
-                      <p className="text-sm text-gray-400 truncate max-w-[200px]">{order.customer_email}</p>
+                      <p className="text-gray-900 font-medium">{order.product_name}</p>
+                      <p className="text-sm text-gray-500 truncate max-w-[200px]">{order.customer_email}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-red-400 font-bold">{Number(order.price).toFixed(2)}€</p>
+                      <p className="text-red-600 font-bold">{Number(order.price || 0).toFixed(2)}€</p>
                       <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${order.status === 'pending' ? 'bg-amber-500/20 text-amber-400' :
-                          order.status === 'paid' ? 'bg-green-500/20 text-green-400' :
-                            'bg-blue-500/20 text-blue-400'
+                        order.status === 'paid' ? 'bg-green-500/20 text-green-400' :
+                          'bg-blue-500/20 text-blue-400'
                         }`}>
                         {order.status}
                       </span>
@@ -194,11 +348,11 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent QR Codes */}
-        <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-          <div className="p-4 border-b border-gray-700">
-            <h2 className="text-lg font-semibold text-white">Últimos QR Codes</h2>
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900">Últimos QR Codes</h2>
           </div>
-          <div className="divide-y divide-gray-700">
+          <div className="divide-y divide-gray-100">
             {stats.recentQrCodes.length === 0 ? (
               <div className="p-8 text-center text-gray-400">
                 <QrCode size={40} className="mx-auto mb-3 opacity-20" />
@@ -206,16 +360,16 @@ export default function AdminDashboard() {
               </div>
             ) : (
               stats.recentQrCodes.map((qr: any) => (
-                <div key={qr.id} className="p-4 hover:bg-gray-700/50 transition-colors">
+                <div key={qr.id} className="p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
-                      <p className="text-white font-medium truncate">{qr.phrase}</p>
+                      <p className="text-gray-900 font-medium truncate">{qr.phrase}</p>
                       <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
                         <Clock size={12} />
                         {new Date(qr.created_at).toLocaleDateString('pt-PT')}
                       </div>
                     </div>
-                    <span className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
                       {qr.short_code}
                     </span>
                   </div>
@@ -228,32 +382,32 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Actions */}
-        <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Ações Rápidas</h2>
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Ações Rápidas</h2>
           <div className="space-y-3">
             <Link
               href="/admin/orders"
-              className="flex items-center gap-3 p-4 bg-gray-700/50 hover:bg-gray-700 rounded-lg transition-colors group"
+              className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group"
             >
-              <ShoppingCart size={20} className="text-amber-400" />
-              <span className="text-gray-200">Gerir Encomendas</span>
-              <ArrowUpRight size={16} className="ml-auto text-gray-500 group-hover:text-white transition-colors" />
+              <ShoppingCart size={20} className="text-amber-600" />
+              <span className="text-gray-700">Gerir Encomendas</span>
+              <ArrowUpRight size={16} className="ml-auto text-gray-400 group-hover:text-gray-700 transition-colors" />
             </Link>
             <Link
               href="/admin/products"
-              className="flex items-center gap-3 p-4 bg-gray-700/50 hover:bg-gray-700 rounded-lg transition-colors group"
+              className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group"
             >
-              <Package size={20} className="text-purple-400" />
-              <span className="text-gray-200">Gerir Produtos</span>
-              <ArrowUpRight size={16} className="ml-auto text-gray-500 group-hover:text-white transition-colors" />
+              <Package size={20} className="text-purple-600" />
+              <span className="text-gray-700">Gerir Produtos</span>
+              <ArrowUpRight size={16} className="ml-auto text-gray-400 group-hover:text-gray-700 transition-colors" />
             </Link>
             <Link
-              href="/admin/content"
-              className="flex items-center gap-3 p-4 bg-gray-700/50 hover:bg-gray-700 rounded-lg transition-colors group"
+              href="/admin/site"
+              className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group"
             >
-              <TrendingUp size={20} className="text-green-400" />
-              <span className="text-gray-200">Editar Conteúdo</span>
-              <ArrowUpRight size={16} className="ml-auto text-gray-500 group-hover:text-white transition-colors" />
+              <TrendingUp size={20} className="text-green-600" />
+              <span className="text-gray-700">Gestão do Site</span>
+              <ArrowUpRight size={16} className="ml-auto text-gray-400 group-hover:text-gray-700 transition-colors" />
             </Link>
           </div>
         </div>

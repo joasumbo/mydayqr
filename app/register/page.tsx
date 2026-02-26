@@ -33,10 +33,18 @@ export default function RegisterPage() {
     });
 
     if (error) {
-      setError(error.message);
-      setLoading(false);
+      const msg = error.message || '';
+      const isAlreadyRegistered =
+        msg.toLowerCase().includes('already registered') ||
+        msg.toLowerCase().includes('already been registered') ||
+        msg.toLowerCase().includes('user already');
+      if (isAlreadyRegistered) {
+        router.push(`/login?hint=exists&email=${encodeURIComponent(email)}`);
+      } else {
+        setError(msg);
+        setLoading(false);
+      }
     } else if (data.user) {
-      // Login automático sem verificação de email
       router.push('/dashboard');
     }
   };

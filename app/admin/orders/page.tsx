@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import Link from 'next/link';
 import {
     Search,
     Filter,
@@ -16,8 +15,15 @@ import {
     Mail,
     User,
     Package as PackageIcon,
-    ExternalLink
+    ExternalLink,
+    Download,
+    TrendingUp,
+    Clock,
+    Euro,
+    QrCode,
 } from 'lucide-react';
+import Link from 'next/link';
+import { adminFetch, adminSave, adminDelete } from '@/lib/admin-data';
 
 interface Order {
     id: string;
@@ -48,36 +54,19 @@ export default function OrdersPage() {
 
     const fetchOrders = async () => {
         try {
-            const { data, error } = await supabase
-                .from('orders')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
+            const data = await adminFetch('orders', { order: { column: 'created_at', ascending: false } });
             if (data) setOrders(data);
-        } catch (error) {
-            console.error('Erro ao buscar encomendas:', error);
-        }
+        } catch (error) { console.error('Erro ao buscar encomendas:', error); }
         setLoading(false);
     };
 
     const handleUpdateStatus = async (orderId: string, newStatus: string) => {
         setUpdating(orderId);
         try {
-            const { error } = await supabase
-                .from('orders')
-                .update({ status: newStatus, updated_at: new Date().toISOString() })
-                .eq('id', orderId);
-
-            if (error) throw error;
-
+            await adminSave('orders', { status: newStatus, updated_at: new Date().toISOString() }, orderId);
             setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus as any } : o));
-            if (selectedOrder?.id === orderId) {
-                setSelectedOrder({ ...selectedOrder, status: newStatus as any });
-            }
-        } catch (error) {
-            console.error('Erro ao atualizar estado:', error);
-        }
+            if (selectedOrder?.id === orderId) setSelectedOrder({ ...selectedOrder, status: newStatus as any });
+        } catch (error) { console.error('Erro ao atualizar estado:', error); }
         setUpdating(null);
     };
 
@@ -136,6 +125,34 @@ export default function OrdersPage() {
                     <h1 className="text-2xl font-bold text-white">Encomendas</h1>
                     <p className="text-gray-400 mt-1">{orders.length} pedidos no total</p>
                 </div>
+                <button
+                    onClick={() => {
+                        const rows = [['ID','Produto','Cliente','Email','Valor','Estado','Data'],...filteredOrders.map(o=>[o.id,o.product_name,o.customer_name||'',o.customer_email,o.price,o.status,new Date(o.created_at).toLocaleDateString('pt-PT')])];
+                        const csv = rows.map(r=>r.join(',')).join('\n');
+                        const a = document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download='encomendas.csv'; a.click();
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm text-gray-300 font-medium transition-colors"
+                >
+                    <Download size={16} /> Exportar CSV
+                </button>
+            </div>
+
+            {/* Stats strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                    { label: 'Total', value: orders.length, icon: PackageIcon, color: 'text-gray-400' },
+                    { label: 'Pendentes', value: orders.filter(o => o.status === 'pending').length, icon: Clock, color: 'text-amber-400' },
+                    { label: 'Pagos', value: orders.filter(o => o.status === 'paid' || o.status === 'shipped' || o.status === 'completed').length, icon: CheckCircle, color: 'text-green-400' },
+                    { label: 'Receita', value: orders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + Number(o.price), 0).toFixed(2) + '€', icon: TrendingUp, color: 'text-red-400' },
+                ].map(stat => (
+                    <div key={stat.label} className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                        <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs text-gray-400 font-medium">{stat.label}</p>
+                            <stat.icon size={16} className={stat.color} />
+                        </div>
+                        <p className="text-2xl font-bold text-white">{stat.value}</p>
+                    </div>
+                ))}
             </div>
 
             {/* Filters */}

@@ -1,19 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTheme } from '@/components/ThemeProvider';
-import { Moon, Sun, Sparkles } from 'lucide-react';
+import { Moon, Sun, Info } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [hint, setHint] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { theme, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    const h = searchParams.get('hint');
+    const e = searchParams.get('email');
+    if (h === 'exists') {
+      setHint('Esta conta já existe. Insere a tua password para entrar.');
+      if (e) setEmail(decodeURIComponent(e));
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +62,13 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">Bem-vindo de volta</h1>
           <p className="text-gray-600 dark:text-gray-300">Entre para acessar sua conta</p>
         </div>
+
+        {hint && (
+          <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-xl text-blue-700 dark:text-blue-300 text-sm flex items-start gap-2">
+            <Info size={16} className="flex-shrink-0 mt-0.5" />
+            {hint}
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl text-red-600 dark:text-red-300 text-sm">
@@ -106,5 +124,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-red-500 via-red-600 to-rose-700 flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" /></div>}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

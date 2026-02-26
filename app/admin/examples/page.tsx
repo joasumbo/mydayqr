@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Plus, Pencil, Trash2, X, Check, Image as ImageIcon, GripVertical } from 'lucide-react';
+import { adminFetch, adminSave, adminDelete } from '@/lib/admin-data';
+import ImageUpload from '@/components/ImageUpload';
 
 interface Example {
   id: string;
@@ -32,15 +34,9 @@ export default function ExamplesPage() {
 
   const fetchExamples = async () => {
     try {
-      const { data } = await supabase
-        .from('examples')
-        .select('*')
-        .order('display_order', { ascending: true });
-
+      const data = await adminFetch('examples', { order: { column: 'display_order', ascending: true } });
       if (data) setExamples(data);
-    } catch (error) {
-      console.error('Erro ao buscar exemplos:', error);
-    }
+    } catch (error) { console.error('Erro ao buscar exemplos:', error); }
     setLoading(false);
   };
 
@@ -80,14 +76,9 @@ export default function ExamplesPage() {
       };
 
       if (editingExample) {
-        await supabase
-          .from('examples')
-          .update(exampleData)
-          .eq('id', editingExample.id);
+        await adminSave('examples', exampleData, editingExample.id);
       } else {
-        await supabase
-          .from('examples')
-          .insert(exampleData);
+        await adminSave('examples', exampleData);
       }
 
       fetchExamples();
@@ -100,30 +91,11 @@ export default function ExamplesPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tens a certeza que queres excluir este exemplo?')) return;
-
-    try {
-      await supabase
-        .from('examples')
-        .delete()
-        .eq('id', id);
-
-      fetchExamples();
-    } catch (error) {
-      console.error('Erro ao excluir:', error);
-    }
+    try { await adminDelete('examples', id); fetchExamples(); } catch (e) { console.error(e); }
   };
 
   const handleToggleActive = async (example: Example) => {
-    try {
-      await supabase
-        .from('examples')
-        .update({ is_active: !example.is_active })
-        .eq('id', example.id);
-
-      fetchExamples();
-    } catch (error) {
-      console.error('Erro ao atualizar:', error);
-    }
+    try { await adminSave('examples', { is_active: !example.is_active }, example.id); fetchExamples(); } catch (e) { console.error(e); }
   };
 
   if (loading) {
@@ -266,13 +238,11 @@ export default function ExamplesPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">URL da Imagem</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-gray-300 mb-2">Imagem</label>
+                <ImageUpload
                   value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  placeholder="/imagens/exemplo.jpeg"
+                  onChange={(url) => setFormData({ ...formData, image_url: url })}
+                  folder="examples"
                 />
               </div>
               <div className="flex items-center gap-3">
