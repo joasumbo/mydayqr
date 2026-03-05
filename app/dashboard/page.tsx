@@ -16,6 +16,7 @@ interface QRCodeItem {
   user_id: string;
   phrase: string;
   short_code: string;
+  edit_code?: string;
   created_at: string;
 }
 interface Customization {
@@ -134,7 +135,7 @@ export default function DashboardPage() {
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   /* success */
-  const [createdQR, setCreatedQR] = useState<{ dataUrl: string; shortCode: string } | null>(null);
+  const [createdQR, setCreatedQR] = useState<{ dataUrl: string; shortCode: string; editCode?: string } | null>(null);
 
   /* history editing */
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -196,7 +197,7 @@ export default function DashboardPage() {
       if (!response.ok) { showToast('error', data.error || 'Erro ao criar'); setStep('step2'); return; }
       const publicUrl = `${window.location.origin}/q/${data.short_code}`;
       const dataUrl = await buildQRDataUrl(publicUrl, customization, 500);
-      setCreatedQR({ dataUrl, shortCode: data.short_code });
+      setCreatedQR({ dataUrl, shortCode: data.short_code, editCode: data.edit_code });
       fetchQRCodes();
       setStep('success');
     } catch {
@@ -258,9 +259,33 @@ export default function DashboardPage() {
     reader.readAsDataURL(file);
   };
 
-  const copyLink = (shortCode: string) => {
+  const copyPublicLink = (shortCode: string) => {
     navigator.clipboard.writeText(`${window.location.origin}/q/${shortCode}`);
     showToast('success', 'Link copiado!');
+  };
+
+  const copyEditLink = (editCode?: string) => {
+    if (!editCode) {
+      showToast('error', 'Link de edição indisponível para este QR');
+      return;
+    }
+    navigator.clipboard.writeText(`${window.location.origin}/edit/${editCode}`);
+    showToast('success', 'Link de edição copiado!');
+  };
+
+  const handleDownloadEditQR = async (editCode?: string) => {
+    if (!editCode) {
+      showToast('error', 'QR de edição indisponível para este item');
+      return;
+    }
+
+    const editUrl = `${window.location.origin}/edit/${editCode}`;
+    const editQrDataUrl = await buildQRDataUrl(editUrl, { darkColor: '#000', lightColor: '#fff', centerPhoto: null }, 500);
+    const link = document.createElement('a');
+    link.download = `qrcode-edicao-${editCode}.png`;
+    link.href = editQrDataUrl;
+    link.click();
+    showToast('success', 'QR de edição descarregado!');
   };
 
   const resetCreation = () => {
@@ -271,6 +296,7 @@ export default function DashboardPage() {
   };
 
   const publicUrl = createdQR ? `${typeof window !== 'undefined' ? window.location.origin : ''}/q/${createdQR.shortCode}` : '';
+  const editUrl = createdQR?.editCode ? `${typeof window !== 'undefined' ? window.location.origin : ''}/edit/${createdQR.editCode}` : '';
 
   if (!user) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -544,10 +570,27 @@ export default function DashboardPage() {
                   <p className="text-xs text-gray-400 mb-0.5">Link público</p>
                   <p className="text-sm text-gray-700 truncate font-mono">{publicUrl}</p>
                 </div>
-                <button onClick={() => copyLink(createdQR.shortCode)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0" title="Copiar">
+                <button onClick={() => copyPublicLink(createdQR.shortCode)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0" title="Copiar">
                   <Copy size={18} className="text-gray-400" />
                 </button>
               </div>
+
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-400 mb-0.5">Link de edição (sem login)</p>
+                  <p className="text-sm text-gray-700 truncate font-mono">{editUrl || 'Indisponível'}</p>
+                </div>
+                <button onClick={() => copyEditLink(createdQR.editCode)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0" title="Copiar link de edição">
+                  <Copy size={18} className="text-gray-400" />
+                </button>
+              </div>
+
+              <button
+                onClick={() => handleDownloadEditQR(createdQR.editCode)}
+                className="w-full py-3 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-all"
+              >
+                Download QR de edição
+              </button>
 
               <a
                 href={`/presentes?qr=${createdQR.shortCode}`}
@@ -613,10 +656,11 @@ export default function DashboardPage() {
                         <p className="text-gray-800 font-medium text-sm line-clamp-2 mb-1">{qr.phrase}</p>
                         <p className="text-xs text-gray-400">{new Date(qr.created_at).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                         <div className="flex items-center gap-1 mt-3 pt-3 border-t border-gray-50">
-                          <button onClick={() => copyLink(qr.short_code)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Copiar link"><Copy size={15} /></button>
+                          <button onClick={() => copyPublicLink(qr.short_code)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Copiar link"><Copy size={15} /></button>
+                          <button onClick={() => copyEditLink(qr.edit_code)} className="p-1.5 text-gray-400 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition-colors" title="Copiar link de edição"><Pencil size={15} /></button>
                           <a href={`/q/${qr.short_code}`} target="_blank" className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Ver"><ExternalLink size={15} /></a>
                           <button onClick={() => handleDownload(qr.short_code)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Download"><Download size={15} /></button>
-                          <button onClick={() => { setEditingId(qr.id); setEditPhrase(qr.phrase); }} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Editar"><Pencil size={15} /></button>
+                          <button onClick={() => { setEditingId(qr.id); setEditPhrase(qr.phrase); }} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Editar no dashboard"><Pencil size={15} /></button>
                           <button onClick={() => handleDelete(qr.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-auto" title="Excluir"><Trash2 size={15} /></button>
                         </div>
                       </>

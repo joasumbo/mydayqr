@@ -43,4 +43,13 @@ USING ranked r
 WHERE p.id = r.id
   AND r.rn > 1;
 
+-- 5) QR Codes: link/QR extra para editar sem login
+ALTER TABLE public.qrcodes ADD COLUMN IF NOT EXISTS edit_code TEXT;
+
+UPDATE public.qrcodes
+SET edit_code = md5(random()::text || clock_timestamp()::text || id::text)
+WHERE edit_code IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_qrcodes_edit_code ON public.qrcodes(edit_code);
+
 SELECT 'Hotfix aplicado com sucesso' AS resultado;

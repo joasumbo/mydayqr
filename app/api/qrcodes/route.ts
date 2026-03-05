@@ -49,15 +49,42 @@ export async function POST(request: NextRequest) {
   }
 
   const shortCode = nanoid(8);
+  const editCode = nanoid(20);
 
-  const { data, error } = await supabaseAdmin
+  let data: any = null;
+  let error: any = null;
+
+  const primaryInsert = await supabaseAdmin
     .from('qrcodes')
     .insert({
       user_id: user.id,
       phrase: phrase.trim(),
       short_code: shortCode,
+      edit_code: editCode,
     })
-    .select();
+    .select('id, user_id, phrase, short_code, edit_code, created_at');
+
+  data = primaryInsert.data;
+  error = primaryInsert.error;
+
+  const missingEditCodeColumn =
+    error &&
+    typeof error.message === 'string' &&
+    error.message.toLowerCase().includes('edit_code');
+
+  if (missingEditCodeColumn) {
+    const fallbackInsert = await supabaseAdmin
+      .from('qrcodes')
+      .insert({
+        user_id: user.id,
+        phrase: phrase.trim(),
+        short_code: shortCode,
+      })
+      .select('id, user_id, phrase, short_code, created_at');
+
+    data = fallbackInsert.data;
+    error = fallbackInsert.error;
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

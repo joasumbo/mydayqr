@@ -4,12 +4,14 @@ CREATE TABLE IF NOT EXISTS public.qrcodes (
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     phrase TEXT NOT NULL,
     short_code TEXT UNIQUE NOT NULL,
+    edit_code TEXT UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- Índices para performance
 CREATE INDEX idx_qrcodes_user_id ON public.qrcodes(user_id);
 CREATE INDEX idx_qrcodes_short_code ON public.qrcodes(short_code);
+CREATE INDEX idx_qrcodes_edit_code ON public.qrcodes(edit_code);
 
 -- RLS (Row Level Security)
 ALTER TABLE public.qrcodes ENABLE ROW LEVEL SECURITY;
