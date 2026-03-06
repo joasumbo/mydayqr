@@ -122,6 +122,7 @@ export default function DashboardPage() {
   /* data */
   const [qrCodes, setQrCodes] = useState<QRCodeItem[]>([]);
   const [qrImages, setQrImages] = useState<Record<string, string>>({});
+  const [editQrImages, setEditQrImages] = useState<Record<string, string>>({});
 
   /* flow */
   const [step, setStep] = useState<Step>('history');
@@ -161,8 +162,14 @@ export default function DashboardPage() {
         const dataUrl = await buildQRDataUrl(url, { darkColor: '#000', lightColor: '#fff', centerPhoto: null }, 200);
         setQrImages((p) => ({ ...p, [qr.short_code]: dataUrl }));
       }
+
+      if (qr.edit_code && !editQrImages[qr.edit_code]) {
+        const editUrl = `${window.location.origin}/edit/${qr.edit_code}`;
+        const editDataUrl = await buildQRDataUrl(editUrl, { darkColor: '#000', lightColor: '#fff', centerPhoto: null }, 140);
+        setEditQrImages((p) => ({ ...p, [qr.edit_code!]: editDataUrl }));
+      }
     });
-  }, [qrCodes]);
+  }, [qrCodes, qrImages, editQrImages]);
 
   /* ── live preview in step 2 ── */
   useEffect(() => {
@@ -634,11 +641,32 @@ export default function DashboardPage() {
               {qrCodes.map((qr) => (
                 <div key={qr.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden">
                   {/* preview header */}
-                  <div className="bg-gradient-to-br from-red-50 to-rose-50 p-6 flex justify-center border-b border-red-50">
+                  <div className="bg-gradient-to-br from-red-50 to-rose-50 p-6 flex flex-col items-center border-b border-red-50">
                     {qrImages[qr.short_code] ? (
                       <img src={qrImages[qr.short_code]} alt="QR" className="w-28 h-28 rounded-lg shadow-sm" />
                     ) : (
                       <div className="w-28 h-28 bg-white/60 rounded-lg animate-pulse" />
+                    )}
+
+                    {qr.edit_code ? (
+                      <>
+                        <button
+                          onClick={() => copyEditLink(qr.edit_code)}
+                          className="mt-3 text-xs font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+                        >
+                          Link para edição
+                        </button>
+
+                        {editQrImages[qr.edit_code] ? (
+                          <a href={`/edit/${qr.edit_code}`} target="_blank" className="mt-2">
+                            <img src={editQrImages[qr.edit_code]} alt="QR de edição" className="w-16 h-16 rounded-md border border-gray-200 shadow-sm bg-white" />
+                          </a>
+                        ) : (
+                          <div className="mt-2 w-16 h-16 bg-white/60 rounded-md animate-pulse" />
+                        )}
+                      </>
+                    ) : (
+                      <p className="mt-3 text-xs text-gray-400">Link de edição indisponível</p>
                     )}
                   </div>
                   {/* body */}
@@ -657,7 +685,6 @@ export default function DashboardPage() {
                         <p className="text-xs text-gray-400">{new Date(qr.created_at).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                         <div className="flex items-center gap-1 mt-3 pt-3 border-t border-gray-50">
                           <button onClick={() => copyPublicLink(qr.short_code)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Copiar link"><Copy size={15} /></button>
-                          <button onClick={() => copyEditLink(qr.edit_code)} className="p-1.5 text-gray-400 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition-colors" title="Copiar link de edição"><Pencil size={15} /></button>
                           <a href={`/q/${qr.short_code}`} target="_blank" className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Ver"><ExternalLink size={15} /></a>
                           <button onClick={() => handleDownload(qr.short_code)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Download"><Download size={15} /></button>
                           <button onClick={() => { setEditingId(qr.id); setEditPhrase(qr.phrase); }} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Editar no dashboard"><Pencil size={15} /></button>

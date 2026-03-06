@@ -36,19 +36,16 @@ export default async function QRCodePage({ params }: { params: Promise<{ code: s
         
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
           <div className="bg-gradient-to-r from-red-600 to-rose-600 px-8 py-6 text-center">
-            <h1 className="text-2xl font-bold text-white tracking-tight">MyDay QR</h1>
+            <a href="/" className="text-2xl font-bold text-white tracking-tight hover:opacity-90 transition-opacity">
+              MyDay QR
+            </a>
           </div>
           
           <div className="p-8 md:p-12">
-            <div className="relative">
-              <div className="absolute -top-4 left-0 text-6xl text-red-200 font-serif leading-none select-none">"</div>
-              <div className="absolute -bottom-4 right-0 text-6xl text-red-200 font-serif leading-none select-none">"</div>
-              
-              <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl p-8 md:p-10 border border-red-100">
-                <p className="text-2xl md:text-3xl text-gray-800 leading-relaxed text-center font-light whitespace-pre-wrap">
+            <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl p-8 md:p-12 border border-red-100">
+              <p className="text-3xl md:text-4xl text-gray-800 leading-relaxed text-center font-medium whitespace-pre-wrap">
                   {qrCode.phrase}
-                </p>
-              </div>
+              </p>
             </div>
             
             <p className="text-center text-gray-400 text-sm mt-8">
@@ -58,16 +55,6 @@ export default async function QRCodePage({ params }: { params: Promise<{ code: s
                 year: 'numeric'
               })}
             </p>
-          </div>
-          
-          <div className="border-t border-gray-100 px-8 py-6 bg-gray-50 text-center">
-            <p className="text-gray-500 mb-4">Cria a tua mensagem especial</p>
-            <a 
-              href="/" 
-              className="inline-block px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl transition-all hover:shadow-lg hover:-translate-y-0.5"
-            >
-              Criar QR Code
-            </a>
           </div>
         </div>
         
