@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -6,8 +6,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "MyDay QR - Gerador de QR Code Vital├¡cio",
-  description: "Crie QR codes vital├¡cios com suas frases personalizadas",
+  title: "MyDay QR - Gerador de QR Code Vitalício",
+  description: "Crie QR codes vitalícios com suas frases personalizadas",
 };
 
 export default function RootLayout({
@@ -25,4 +25,3 @@ export default function RootLayout({
     </html>
   );
 }
-

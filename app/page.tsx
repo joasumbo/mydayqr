@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import { Heart, Gift, Calendar, Sparkles, QrCode, ShoppingBag } from 'lucide-react';
@@ -26,7 +26,7 @@ export default function HomePage() {
 
             {/* Subtitle */}
             <p className="text-xl md:text-2xl mb-12 leading-relaxed opacity-95">
-              Um objeto f├¡sico com um QR Code que te permite mudar a mensagem sempre que quiseres.
+              Um objeto físico com um QR Code que te permite mudar a mensagem sempre que quiseres.
             </p>
 
             {/* CTA Buttons */}
@@ -35,13 +35,13 @@ export default function HomePage() {
                 href="/register"
                 className="px-10 py-4 bg-white hover:bg-gray-100 text-red-600 font-bold rounded-xl shadow-2xl hover:shadow-xl transition-all transform hover:scale-105 text-lg"
               >
-                Criar Conta Gr├ítis
+                Criar Conta Grátis
               </Link>
               <Link
                 href="/login"
                 className="px-10 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-lg text-white font-bold rounded-xl border-2 border-white/30 transition-all transform hover:scale-105 text-lg"
               >
-                J├í tenho conta
+                Já tenho conta
               </Link>
             </div>
           </div>
@@ -53,21 +53,21 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <p className="text-2xl text-gray-800 leading-relaxed mb-4">
-              Canecas, autocolantes, t-shirts e pequenas decora├º├Áes com um QR Code especial.
+              Canecas, autocolantes, t-shirts e pequenas decorações com um QR Code especial.
             </p>
             <p className="text-2xl font-semibold text-red-600">
-              Hoje uma frase. Amanh├ú outra. Sempre a mesma pe├ºa.
+              Hoje uma frase. Amanhã outra. Sempre a mesma peça.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Para quem ├® */}
+      {/* Para quem é */}
       <div className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-gray-900">
-              Para quem ├® este tipo de presente
+              Para quem é este tipo de presente
             </h2>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="flex items-start gap-4 p-6 bg-red-50 rounded-xl">
@@ -81,21 +81,21 @@ export default function HomePage() {
                 <Gift className="text-red-600 flex-shrink-0" size={32} />
                 <div>
                   <h3 className="font-bold text-lg text-gray-900 mb-2">Casais</h3>
-                  <p className="text-gray-600">Um presente ├║nico que evolui com a vossa rela├º├úo</p>
+                  <p className="text-gray-600">Um presente único que evolui com a vossa relação</p>
                 </div>
               </div>
               <div className="flex items-start gap-4 p-6 bg-red-50 rounded-xl">
                 <Calendar className="text-red-600 flex-shrink-0" size={32} />
                 <div>
                   <h3 className="font-bold text-lg text-gray-900 mb-2">Datas especiais</h3>
-                  <p className="text-gray-600">Anivers├írios, Natal, Dia dos Namorados... sempre especial</p>
+                  <p className="text-gray-600">Aniversários, Natal, Dia dos Namorados... sempre especial</p>
                 </div>
               </div>
               <div className="flex items-start gap-4 p-6 bg-red-50 rounded-xl">
                 <Sparkles className="text-red-600 flex-shrink-0" size={32} />
                 <div>
-                  <h3 className="font-bold text-lg text-gray-900 mb-2">Pessoas que gostam de pequenos gestos di├írios</h3>
-                  <p className="text-gray-600">Para quem valoriza aten├º├úo e afeto no dia a dia</p>
+                  <h3 className="font-bold text-lg text-gray-900 mb-2">Pessoas que gostam de pequenos gestos diários</h3>
+                  <p className="text-gray-600">Para quem valoriza atenção e afeto no dia a dia</p>
                 </div>
               </div>
             </div>
@@ -103,17 +103,17 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Porque ├® diferente */}
+      {/* Porque é diferente */}
       <div className="py-20 bg-gradient-to-br from-red-50 to-rose-50">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-gray-900">
-              Porque este presente ├® diferente
+              Porque este presente é diferente
             </h2>
             <div className="space-y-6">
               <div className="flex items-start gap-4 p-6 bg-white rounded-xl shadow-md">
                 <div className="w-2 h-2 bg-red-600 rounded-full mt-2 flex-shrink-0"></div>
-                <p className="text-lg text-gray-800">O objeto ├® f├¡sico e fica em casa</p>
+                <p className="text-lg text-gray-800">O objeto é físico e fica em casa</p>
               </div>
               <div className="flex items-start gap-4 p-6 bg-white rounded-xl shadow-md">
                 <div className="w-2 h-2 bg-red-600 rounded-full mt-2 flex-shrink-0"></div>
@@ -121,11 +121,11 @@ export default function HomePage() {
               </div>
               <div className="flex items-start gap-4 p-6 bg-white rounded-xl shadow-md">
                 <div className="w-2 h-2 bg-red-600 rounded-full mt-2 flex-shrink-0"></div>
-                <p className="text-lg text-gray-800">N├úo ├® descart├ível</p>
+                <p className="text-lg text-gray-800">Não é descartável</p>
               </div>
               <div className="flex items-start gap-4 p-6 bg-white rounded-xl shadow-md">
                 <div className="w-2 h-2 bg-red-600 rounded-full mt-2 flex-shrink-0"></div>
-                <p className="text-lg text-gray-800">Cria um h├íbito simples e emocional</p>
+                <p className="text-lg text-gray-800">Cria um hábito simples e emocional</p>
               </div>
             </div>
           </div>
@@ -148,8 +148,8 @@ export default function HomePage() {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
-                <h3 className="font-bold text-xl text-gray-900 mb-2">Caneca com frase di├íria</h3>
-                <p className="text-gray-600">Caf├® da manh├ú com uma mensagem sempre nova</p>
+                <h3 className="font-bold text-xl text-gray-900 mb-2">Caneca com frase diária</h3>
+                <p className="text-gray-600">Café da manhã com uma mensagem sempre nova</p>
               </div>
               <div className="text-center group">
                 <div className="bg-gray-50 rounded-xl overflow-hidden mb-4 h-56 flex items-center justify-center relative">
@@ -160,7 +160,7 @@ export default function HomePage() {
                   />
                 </div>
                 <h3 className="font-bold text-xl text-gray-900 mb-2">Autocolante para colocar num objeto</h3>
-                <p className="text-gray-600">No port├ítil, agenda ou espelho</p>
+                <p className="text-gray-600">No portátil, agenda ou espelho</p>
               </div>
               <div className="text-center group">
                 <div className="bg-gray-50 rounded-xl overflow-hidden mb-4 h-56 flex items-center justify-center relative">
@@ -170,8 +170,8 @@ export default function HomePage() {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
-                <h3 className="font-bold text-xl text-gray-900 mb-2">Pe├ºa na mesa de cabeceira</h3>
-                <p className="text-gray-600">A ├║ltima coisa que v├¬s antes de dormir</p>
+                <h3 className="font-bold text-xl text-gray-900 mb-2">Peça na mesa de cabeceira</h3>
+                <p className="text-gray-600">A última coisa que vês antes de dormir</p>
               </div>
               <div className="text-center group">
                 <div className="bg-gray-50 rounded-xl overflow-hidden mb-4 h-56 flex items-center justify-center relative">
@@ -212,7 +212,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 mb-2">Escolhes o objeto</h3>
-                  <p className="text-gray-600">Caneca, t-shirt, autocolante ou outra pe├ºa ├á tua escolha</p>
+                  <p className="text-gray-600">Caneca, t-shirt, autocolante ou outra peça à tua escolha</p>
                 </div>
               </div>
               <div className="flex items-start gap-6">
@@ -229,33 +229,33 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Pre├ºos */}
+      {/* Preços */}
       <div className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-gray-900">
-              Pre├ºos
+              Preços
             </h2>
-            <p className="text-center text-gray-600 mb-12">J├í inclui envio para Portugal</p>
+            <p className="text-center text-gray-600 mb-12">Já inclui envio para Portugal</p>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl p-6 text-center border-2 border-red-200">
                 <h3 className="font-bold text-xl text-gray-900 mb-2">Download</h3>
-                <p className="text-4xl font-bold text-red-600 mb-4">2Ôé¼</p>
+                <p className="text-4xl font-bold text-red-600 mb-4">2€</p>
                 <p className="text-gray-600 text-sm">Arquivo digital do QR Code</p>
               </div>
               <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl p-6 text-center border-2 border-red-200">
                 <h3 className="font-bold text-xl text-gray-900 mb-2">Imagem com QR</h3>
-                <p className="text-4xl font-bold text-red-600 mb-4">5Ôé¼</p>
+                <p className="text-4xl font-bold text-red-600 mb-4">5€</p>
                 <p className="text-gray-600 text-sm">Design personalizado</p>
               </div>
               <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl p-6 text-center border-2 border-red-200">
                 <h3 className="font-bold text-xl text-gray-900 mb-2">Caneca</h3>
-                <p className="text-4xl font-bold text-red-600 mb-4">17Ôé¼</p>
+                <p className="text-4xl font-bold text-red-600 mb-4">17€</p>
                 <p className="text-gray-600 text-sm">Caneca personalizada</p>
               </div>
               <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl p-6 text-center border-2 border-red-200">
                 <h3 className="font-bold text-xl text-gray-900 mb-2">T-shirt</h3>
-                <p className="text-4xl font-bold text-red-600 mb-4">25Ôé¼</p>
+                <p className="text-4xl font-bold text-red-600 mb-4">25€</p>
                 <p className="text-gray-600 text-sm">T-shirt com QR Code</p>
               </div>
             </div>
@@ -281,7 +281,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <p className="text-lg mb-4">
-              Criado pela Inpulse Events ÔÇö solu├º├Áes pr├íticas para pessoas reais.
+              Criado pela Inpulse Events — soluções práticas para pessoas reais.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <a href="mailto:geral.inpulse@gmail.com" className="text-red-400 hover:text-red-300 transition">
@@ -293,7 +293,7 @@ export default function HomePage() {
               </a>
             </div>
             <p className="text-gray-500 text-sm mt-6">
-              ┬® {new Date().getFullYear()} MyDay QR - Inpulse Events
+              © {new Date().getFullYear()} MyDay QR - Inpulse Events
             </p>
           </div>
         </div>
@@ -301,4 +301,3 @@ export default function HomePage() {
     </div>
   );
 }
-
